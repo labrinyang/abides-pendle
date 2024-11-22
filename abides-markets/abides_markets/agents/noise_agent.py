@@ -78,7 +78,8 @@ class NoiseAgent(TradingAgent):
                 self.trading = True
 
                 # Time to start trading!
-                logger.debug("{} is ready to start trading now.", self.name)
+                logger.debug("{} is ready to start trading now.".format(self.name))
+
 
         # Steady state wakeup behavior starts here.
 

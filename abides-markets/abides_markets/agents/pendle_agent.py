@@ -33,7 +33,7 @@ class PendleSeedingAgent(TradingAgent):
         # Base class init.
         super().__init__(id, name, type, random_state, symbol, log_orders, collateral)
         self.symbol = symbol
-
+        
         # The agent begins in its "complete" state, not waiting for
         # any special event or condition.
         self.state: str = "AWAITING_WAKEUP"
@@ -44,7 +44,8 @@ class PendleSeedingAgent(TradingAgent):
         self.max_bid: int = max_bid
         self.min_ask: int = min_ask
         self.max_ask: int = max_ask
-
+        
+        
     def kernel_starting(self, start_time: NanosecondTime) -> None:
         # self.kernel is set in Agent.kernel_initializing()
         # self.exchange_id is set in TradingAgent.kernel_starting()
