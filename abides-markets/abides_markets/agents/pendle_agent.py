@@ -52,7 +52,7 @@ class PendleSeedingAgent(TradingAgent):
 
         super().kernel_starting(start_time)
 
-        self.pen_oracle = self.kernel.pen_oracle
+        self.rate_oracle = self.kernel.rate_oracle
 
     def kernel_stopping(self) -> None:
         # Always call parent method to be safe.
