@@ -168,10 +168,9 @@ def test_pendle_market_maker_agent_specific_example():
 
     # Step 1: First wakeup (09:00)
     pendle_agent.wakeup(mkt_open)
-
-    # Simulate receiving spread information
-    bid = 990  # 990 cents, i.e., $9.90
-    ask = 1010  # 1010 cents, i.e., $10.10
+    
+    bid = 990  # tick
+    ask = 1010  
     spread_response_msg = QuerySpreadResponseMsg(
         symbol="PEN",
         bids=[(bid, 1)],
@@ -215,8 +214,8 @@ def test_pendle_market_maker_agent_specific_example():
     pendle_agent.wakeup(next_wakeup_time)
 
     # Simulate receiving new spread information
-    new_bid = 980  # 980 cents, i.e., $9.80
-    new_ask = 1020  # 1020 cents, i.e., $10.20
+    new_bid = 980 # tick
+    new_ask = 1020  
     new_spread_response_msg = QuerySpreadResponseMsg(
         symbol="PEN",
         bids=[(new_bid, 1)],
@@ -257,7 +256,7 @@ def test_pendle_market_maker_agent_specific_example():
 
     # Step 3: Handle market imbalance (11:00)
     imbalance_time = str_to_ns("11:00:00")
-    imbalance = 0.95  # 95%
+    imbalance = 0.95  
     imbalance_side = Side.BID
 
     imbalance_msg = BookImbalanceDataMsg(
