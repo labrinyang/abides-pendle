@@ -176,20 +176,6 @@ def test_value_agent_calculation_logic():
             last_trade=None,
         )
         value_agent.receive_message(current_time, sender_id=exchange_agent.id, message=message)
-        logger.debug(f"size_1: {value_agent.size_1}")
-        logger.debug(f"percentage: {value_agent.percentage}")
-        logger.debug(f"position: {value_agent.position}")
-        logger.debug(f"tm: {value_agent.tm}")
-        logger.debug(f"MtM: {value_agent.MtM}")
-        
-        # logger.debug(f"(1 - {value_agent.oracle_coef} - {value_agent.funding_rate_coef})*{value_agent.r_t} + {value_agent.funding_rate_coef}*{value_agent.last_funding_rate} + {value_agent.oracle_coef}*{tick_to_rate(value_agent.obs_t)}")
-        # logger.debug(f"ValueAgent rt-1={value_agent.rt1}")
-        # logger.debug(f"ValueAgent self.oracle_coef = {value_agent.oracle_coef}")
-        # logger.debug(f"ValueAgent last_funding_rate={value_agent.last_funding_rate}")
-        # logger.debug(f"ValueAgent Rot={value_agent.Rot}")
-        # logger.debug(f"ValueAgent funding_rate_coef={value_agent.funding_rate_coef}")
-        
-        logger.debug(f"ValueAgent r_t={value_agent.r_t}")
         
         if len(value_agent.orders) > 0:
             order = next(iter(value_agent.orders.values()))

@@ -154,8 +154,7 @@ class ValueAgent(TradingAgent):
         MtM = self.mark_to_market()
         self.MtM = MtM
         size = int(percentage*MtM/(0.05*self.n_payment*self.rate_normalizer))
-        self.size_1 = size
-        self.tm = self.n_payment*self.rate_normalizer
+
         side = Side.BID if buy == 1 else Side.ASK
 
         if size > 0:
