@@ -171,7 +171,7 @@ def build_config(
                 symbol=ticker,
                 collateral=value_collateral[0],
                 log_orders=log_orders,
-                order_size_model=NormalOrderSizeModel(120_000, 10_000),
+                order_size_model=ORDER_SIZE_MODEL,
                 random_state=np.random.RandomState(
                     seed=np.random.randint(low=0, high=2**32, dtype="uint64")
                 ),
@@ -193,7 +193,7 @@ def build_config(
                 symbol=ticker,
                 collateral=value_collateral[1],
                 log_orders=log_orders,
-                order_size_model=NormalOrderSizeModel(200_000, 20_000),
+                order_size_model=ORDER_SIZE_MODEL,
                 random_state=np.random.RandomState(
                     seed=np.random.randint(low=0, high=2**32, dtype="uint64")
                 ),

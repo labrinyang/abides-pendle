@@ -204,7 +204,4 @@ class LiquidatorAgent(TradingAgent):
         return True
 
     def get_wake_frequency(self) -> NanosecondTime:
-        return np.random.exponential(self.wake_up_freq)
-    
-    def get_quick_wake_frequency(self) -> NanosecondTime:
-        return np.random.exponential(self.wake_up_freq/60)
+        return self.wake_up_freq

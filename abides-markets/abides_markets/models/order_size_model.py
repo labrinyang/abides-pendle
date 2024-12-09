@@ -41,4 +41,3 @@ class NormalOrderSizeModel:
 
     def sample(self, random_state: np.random.RandomState) -> float:
         return np.random.normal(self.mean, self.sd)
-    

@@ -38,8 +38,8 @@ class OrderBook:
         bids: List of bid price levels (index zero is best bid), stored as a PriceLevel object.
         asks: List of ask price levels (index zero is best ask), stored as a PriceLevel object.
         last_trade: The price that the last trade was made at.
-        book_log: Log of the full order book depth (price and volume) each time it changes.
-        book_log2: TODO
+        book_log: Log of the best order book (price and volume) each time it changes.
+        book_log2: Log of the full order book depth (price and volume) each time it changes.
         quotes_seen: TODO
         history: A truncated history of previous trades.
         last_update_ts: The last timestamp the order book was updated.
@@ -71,6 +71,10 @@ class OrderBook:
 
         self.buy_transactions: List[Tuple[NanosecondTime, int, int]] = []
         self.sell_transactions: List[Tuple[NanosecondTime, int, int]] = []
+
+        # The book keeps track of the last twap calculated, this value is updated everytime the twap is updated
+        self.last_twap: Optional[float] = 1000 
+        self.twap_record: List[Tuple[NanosecondTime, float]] = []
 
     def handle_limit_order(self, order: LimitOrder, quiet: bool = False) -> None:
         """Matches a limit order or adds it to the order book.
@@ -296,6 +300,8 @@ class OrderBook:
                     price=matched_order.limit_price if is_ptc_exec else None,
                 )
             )
+
+            assert self.get_twap()  # Update the twap
 
             filled_order = deepcopy(order)
             filled_order.quantity = matched_order.quantity
@@ -780,8 +786,8 @@ class OrderBook:
     
     def get_twap(self, lookback_period: NanosecondTime = str_to_ns("1h")) -> float:
         """
-        Method retrieves the twap mid price for a symbol over a lookback
-        period finishing at the current simulation time.
+        Method retrieves the twap price for a symbol over a lookback
+        period finishing at the current simulation time. Called after each trade to update the twap.
 
         Arguments:
             lookback_period: The period in time from the current time to calculate the
@@ -818,8 +824,17 @@ class OrderBook:
             else:  # No transaction query at this time
                 num_price -= 1
             
+        if num_price == 0:
+            # No transaction yet
+            # logger.info(f"Sum {sum}")
+            logger.info("No transaction yet!")
+            return None
+        
         twap = sum/num_price
-        self.owner.last_twap = twap
+        self.last_twap = twap
+        self.twap_record.append(
+            (self.owner.current_time, twap)
+        )
 
         return twap
 

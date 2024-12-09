@@ -155,7 +155,7 @@ def test_get_twap():
 
         book.handle_market_order(order)
 
-    assert book.get_twap() == 300
+    assert book.last_twap == 300
 
     time_now += str_to_ns("15s")
     agent.current_time = time_now
@@ -171,7 +171,7 @@ def test_get_twap():
 
         book.handle_market_order(order)
 
-    assert book.get_twap() == 250
+    assert book.last_twap == 250
 
 
 def test_get_imbalance():

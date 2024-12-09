@@ -1342,21 +1342,3 @@ class TradingAgent(FinancialAgent):
         sensitive_tick = rate_to_tick(sensitive_rate)
 
         return sensitive_tick
-    
-    def size_normalized(self, position: Optional[Mapping[str, int]]=None):
-        # If no position is provided, self evaluating the current position
-        if not position:  
-            position = self.position 
-
-        return position["SIZE"]*self.n_payment*self.rate_normalizer
-    
-    def position_updated(self):
-        self.logEvent("POSITION_UPDATED", str(self.position))
-        self.last_mm = self.maintainance_margin()
-        
-        self.last_R1 = self.R1()
-        self.last_R2 = self.R2()
-        self.logEvent("METRIC", [self.position['SIZE'], self.last_R1, self.last_R2])
-        
-    def get_wake_frequency(self) -> NanosecondTime:
-        return self.random_state.randint(low=0, high=100)

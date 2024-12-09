@@ -1,0 +1,21 @@
+S = 100 * 0.5
+twap: 10%
+
+
+Agent MtM: C + S * (10% - f) 
+MM(S) = S * 5%
+
+mRatio = MtM/MM(S) < 1 
+
+Liquidate position of S1 < S, incentive = l, new mRatio:
+(MtM - l)/(S-S1)*5%
+
+We want: MtM/MM(S) < (MtM - l)/MM(S-S1)
+<=> l < MtM*(MM(S) - MM(S-S1))/MM(S) = mRatio * marginDelta
+
+Liquidator:
+Collateral: S1*(f - 10%) + l 
+Position: (S1, f)
+Surely profit if S1 sold for > 10% + l/S1
+
+
