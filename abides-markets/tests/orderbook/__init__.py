@@ -7,7 +7,7 @@ from abides_markets.rate_oracle import ConstantOracle
 
 
 SYMBOL = "X"
-TIME = 0
+TIME = 1000
 
 
 class FakeExchangeAgent:

@@ -1,7 +1,7 @@
-python -m pip install -r requirements.txt
-python -m pip install -r requirements-dev.txt
+python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements-dev.txt
 cd abides-core
 python setup.py install
 cd ../abides-markets
-python setup.py install
+python3 setup.py install
 cd ..

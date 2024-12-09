@@ -11,6 +11,11 @@ from abides_markets.agents import ValueAgent
 
 from abides_core import Kernel
 from abides_core.utils import datetime_str_to_ns, str_to_ns
+from abides_markets.driving_oracle import ManualOracle, LinearOracle
+from abides_markets.agents import ValueAgent
+
+from abides_core import Kernel
+from abides_core.utils import datetime_str_to_ns, str_to_ns
 
 
 def test_const_oracle():
@@ -23,6 +28,9 @@ def test_const_oracle():
 
 def test_BTC_oracle():
     oracle = BTCOracle()
+    assert round(oracle.get_floating_rate(1_673_222_400_003_000_001) - 5.796000e-05, 10) == 0
+    assert oracle.get_floating_rate(1_675_238_400_000_000_000) == 0.0001
+    
     assert round(oracle.get_floating_rate(1_673_222_400_003_000_001) - 5.796000e-05, 10) == 0
     assert oracle.get_floating_rate(1_675_238_400_000_000_000) == 0.0001
     
