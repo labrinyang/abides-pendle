@@ -24,16 +24,6 @@ class FakeRateOracle:
     def get_floating_rate(self, current_time: NanosecondTime) -> float:
         return 0
 
-class TestTradingAgent(TradingAgent):
-    def get_wake_frequency(self) -> NanosecondTime:
-        return 0
-
-class TestLiquidatorAgent(LiquidatorAgent):
-    def get_wake_frequency(self) -> NanosecondTime:
-        return 0
-
-    def get_quick_wake_frequency(self) -> NanosecondTime:
-        return 0
 
 def test_liquidator_calculate_into_bid_wall():
     logger.debug("Starting test_liquidator_calculate_into_bid_wall")
@@ -54,8 +44,8 @@ def test_liquidator_calculate_into_bid_wall():
 
     exchange_agent.order_books["PEN"] = FakeOrderBook()
 
-    liquidator = TestLiquidatorAgent(id=1, name="LiquidatorAgent")
-    unhealthy_agent = TestTradingAgent(id=2, name="UnhealthyAgent")
+    liquidator = LiquidatorAgent(id=1, name="LiquidatorAgent")
+    unhealthy_agent = TradingAgent(id=2, name="UnhealthyAgent")
 
     swap_interval = str_to_ns("8h")
     kernel = Kernel(
@@ -148,8 +138,8 @@ def test_liquidator_calculate_into_ask_wall():
 
     exchange_agent.order_books["PEN"] = FakeOrderBook()
 
-    liquidator = TestLiquidatorAgent(id=1, name="LiquidatorAgent")
-    unhealthy_agent = TestTradingAgent(id=2, name="UnhealthyAgent")
+    liquidator = LiquidatorAgent(id=1, name="LiquidatorAgent")
+    unhealthy_agent = TradingAgent(id=2, name="UnhealthyAgent")
 
     swap_interval = str_to_ns("8h")
     kernel = Kernel(
