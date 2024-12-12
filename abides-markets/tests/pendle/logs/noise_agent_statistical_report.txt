@@ -1,0 +1,18 @@
+NoiseAgent Statistical Report
+
+Wakeup Times Statistics:
+Number of Wakeups: 1000
+Mean Wakeup Time: 999500000.00 Nanoseconds
+Median Wakeup Time: 999500000.00 Nanoseconds
+Std Dev of Wakeup Time: 288674990.26 Nanoseconds
+Min Wakeup Time: 500000000 Nanoseconds
+Max Wakeup Time: 1499000000 Nanoseconds
+
+Order Sizes Statistics:
+Number of Orders: 1000
+Mean Order Size: 48.97
+Median Order Size: 49.00
+Std Dev of Order Size: 29.77
+Min Order Size: 1
+Max Order Size: 99
+

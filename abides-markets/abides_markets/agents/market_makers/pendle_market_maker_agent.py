@@ -43,7 +43,7 @@ class PendleMarketMakerAgent(TradingAgent):
         type: Optional[str] = None,
         random_state: Optional[np.random.RandomState] = None,
         pov: float = 0.025,
-        orders_size: List[Dict[str, float]] = [{"time": 1, "size": 100_000}],
+        min_order_size: int = 1,
         window_size: int = 5,
         num_ticks: int = 10,
         level_spacing: float = 0.5,
@@ -61,7 +61,9 @@ class PendleMarketMakerAgent(TradingAgent):
         self.pov: float = (
             pov  # fraction of transacted volume placed at each price level
         )
-        self.orders_size: List[Dict[str, float]] = orders_size
+        self.min_order_size: int = (
+            min_order_size  # minimum size order to place at each level, if pov <= min
+        )
         self.window_size: int = window_size
         self.num_ticks: int = num_ticks  # number of ticks on each side of window in which to place liquidity
         self.level_spacing: float = (
@@ -84,7 +86,8 @@ class PendleMarketMakerAgent(TradingAgent):
 
         ## Internal variables
         self.state: Dict[str, bool] = self.initialise_state()
-        self.order_size: int = 0
+        self.buy_order_size: int = self.min_order_size
+        self.sell_order_size: int = self.min_order_size
 
         self.last_mid: int = rate_to_tick(r_bar)  # last observed mid price
 
@@ -95,7 +98,7 @@ class PendleMarketMakerAgent(TradingAgent):
     def initialise_state(self) -> Dict[str, bool]:
         """Returns variables that keep track of whether spread and transacted volume have been observed."""
 
-        return {"AWAITING_SPREAD": True}
+        return {"AWAITING_SPREAD": True, "AWAITING_TRANSACTED_VOLUME": True}
 
     def kernel_starting(self, start_time: NanosecondTime) -> None:
         super().kernel_starting(start_time)
@@ -123,6 +126,7 @@ class PendleMarketMakerAgent(TradingAgent):
             self.cancel_all_orders()
             self.delay(self.cancel_limit_delay)
             self.get_current_spread(self.symbol)
+            self.get_transacted_volume(self.symbol, lookback_period=self.wake_up_freq)
             self.initialise_state()
 
     def receive_message(
@@ -141,6 +145,13 @@ class PendleMarketMakerAgent(TradingAgent):
         mid = None
         if self.last_mid is not None:
             mid = self.last_mid
+
+        if (
+            isinstance(message, QueryTransactedVolResponseMsg)
+            and self.state["AWAITING_TRANSACTED_VOLUME"] is True
+        ):
+            self.update_order_size()
+            self.state["AWAITING_TRANSACTED_VOLUME"] = False
 
         if isinstance(message, BookImbalanceDataMsg):
             if message.stage == MarketDataEventMsg.Stage.START:
@@ -175,6 +186,7 @@ class PendleMarketMakerAgent(TradingAgent):
 
         if (
             self.state["AWAITING_SPREAD"] is False
+            and self.state["AWAITING_TRANSACTED_VOLUME"] is False
             and mid is not None
         ):
             self.place_orders(mid)
@@ -183,13 +195,20 @@ class PendleMarketMakerAgent(TradingAgent):
 
     def update_order_size(self) -> None:
         """Updates size of order to be placed."""
-        time_now = (self.current_time - self.mkt_open)/(self.mkt_close - self.mkt_open)
-        assert time_now >= 0 and time_now <=1, fmt_ts(self.current_time)
 
-        for order in self.orders_size:
-            if time_now <= order["time"]:
-                self.order_size = order["size"]
-                break
+        buy_transacted_volume = self.transacted_volume[self.symbol][0]
+        sell_transacted_volume = self.transacted_volume[self.symbol][1]
+        total_transacted_volume = buy_transacted_volume + sell_transacted_volume
+
+        # logger.info(f"{fmt_ts(self.current_time)} - Recorded transacted volume {total_transacted_volume}: {buy_transacted_volume} BUY, {sell_transacted_volume} SELL")
+        qty = round(self.pov * total_transacted_volume)
+
+        self.buy_order_size = (
+            qty if qty >= self.min_order_size else self.min_order_size
+        )
+        self.sell_order_size = (
+            qty if qty >= self.min_order_size else self.min_order_size
+            )
 
     def compute_orders_to_place(self, mid: int) -> Tuple[List[int], List[int]]:
         """Given a mid price, computes the orders that need to be placed to
@@ -209,7 +228,7 @@ class PendleMarketMakerAgent(TradingAgent):
 
         bids_to_place = [
             price
-            for price in range(highest_bid, lowest_bid - self.tick_size, -self.tick_size)
+            for price in range(lowest_bid, highest_bid + self.tick_size, self.tick_size)
         ]
         asks_to_place = [
             price
@@ -225,23 +244,34 @@ class PendleMarketMakerAgent(TradingAgent):
         Arguments:
             mid: Mid price.
         """
-        self.update_order_size()
 
         bid_orders, ask_orders = self.compute_orders_to_place(mid)
 
         orders = []
 
         for i, bid_price in enumerate(bid_orders):
+            logger.debug(
+                "{}: Placing BUY limit order of size {} @ price {}",
+                self.name,
+                self.buy_order_size,
+                bid_price,
+            )
             orders.append(
                 self.create_limit_order(
-                    self.symbol, self.order_size*(10-i), Side.BID, bid_price
+                    self.symbol, self.buy_order_size*(10-i)/45*20, Side.BID, bid_price
                 )
             )
 
         for i, ask_price in enumerate(ask_orders):
+            logger.debug(
+                "{}: Placing SELL limit order of size {} @ price {}",
+                self.name,
+                self.sell_order_size,
+                ask_price,
+            )
             orders.append(
                 self.create_limit_order(
-                    self.symbol, self.order_size*(10-i), Side.ASK, ask_price
+                    self.symbol, self.sell_order_size**(10-i)/45*20, Side.ASK, ask_price
                 )
             )
 

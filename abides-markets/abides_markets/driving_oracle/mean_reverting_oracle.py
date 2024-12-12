@@ -1,14 +1,12 @@
 import datetime as dt
 import logging
 from math import sqrt
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
 
 from abides_core import NanosecondTime
-from abides_core.utils import str_to_ns
-from ..agents.utils import tick_to_rate, rate_to_tick
 
 from .oracle import Oracle
 
@@ -16,31 +14,54 @@ from .oracle import Oracle
 logger = logging.getLogger(__name__)
 
 
-class ManualOracle(Oracle):
+class MeanRevertingOracle(Oracle):
+    """The MeanRevertingOracle requires three parameters: a mean fundamental value,
+    a mean reversion coefficient, and a shock variance.  It constructs and retains
+    a fundamental value time series for each requested symbol, and provides noisy
+    observations of those values upon agent request.  The expectation is that
+    agents using such an oracle will know the mean-reverting equation and all
+    relevant parameters, but will not know the random shocks applied to the
+    sequence at each time step.
+
+    Historical dates are effectively meaningless to this oracle.  It is driven by
+    the numpy random number seed contained within the experimental config file.
+    This oracle uses the nanoseconds portion of the current simulation time as
+    discrete "time steps".  A suggestion: to keep wallclock runtime reasonable,
+    have the agents operate for only ~1000 nanoseconds, but interpret nanoseconds
+    as seconds or minutes."""
+
     def __init__(
         self,
         mkt_open: NanosecondTime,
         mkt_close: NanosecondTime,
         symbols: Dict[str, Dict[str, Any]],
-        megashock: List[Dict[str, float]] = []
     ) -> None:
+        # Symbols must be a dictionary of dictionaries with outer keys as symbol names and
+        # inner keys: r_bar, kappa, sigma_s.
         self.mkt_open: NanosecondTime = mkt_open
         self.mkt_close: NanosecondTime = mkt_close
         self.symbols: Dict[str, Dict[str, Any]] = symbols
-        self.megashock: List[Dict[str, float]] = megashock
-
-        self.freq: str = "1min"
 
         # The dictionary r holds the fundamenal value series for each symbol.
-        self.r: Dict[str, np.array] = {}
+        self.r: Dict[str, pd.Series] = {}
+
+        then = dt.datetime.now()
 
         for symbol in symbols:
             s = symbols[symbol]
+            logger.debug(
+                "MeanRevertingOracle computing fundamental value series for {}", symbol
+            )
             self.r[symbol] = self.generate_fundamental_value_series(symbol=symbol, **s)
 
+        now = dt.datetime.now()
+
+        logger.debug("MeanRevertingOracle initialized for symbols {}", symbols)
+        logger.debug("MeanRevertingOracle initialization took {}", now - then)
+
     def generate_fundamental_value_series(
-        self, symbol: str, r_bar: float, kappa: float, sigma_s: float
-    ) -> np.array:
+        self, symbol: str, r_bar: int, kappa: float, sigma_s: float
+    ) -> pd.Series:
         """Generates the fundamental value series for a single stock symbol.
 
         Arguments:
@@ -61,30 +82,25 @@ class ManualOracle(Oracle):
 
         # Create the time series into which values will be projected and initialize the first value.
         date_range = pd.date_range(
-            self.mkt_open, self.mkt_close, freq=self.freq
+            self.mkt_open, self.mkt_close, closed="left", freq="N"
         )
 
         s = pd.Series(index=date_range)
         r = np.zeros(len(s.index))
-        r_bar_tick = rate_to_tick(r_bar)
-        r[0] = r_bar_tick
+        r[0] = r_bar
 
         # Predetermine the random shocks for all time steps (at once, for computation speed).
         shock = np.random.normal(scale=sigma_s, size=(r.shape[0]))
-    
-        for megashock in self.megashock:
-            index = int(megashock["time"]*r.shape[0])
-            shock[index] = megashock["mag"]
 
-        # Compute the value series.
+        # Compute the mean reverting fundamental value series.
         for t in range(1, r.shape[0]):
-            r[t] = max(0, (kappa * r_bar_tick) + ((1 - kappa) * r[t - 1]) + shock[t])
+            r[t] = max(0, (kappa * r_bar) + ((1 - kappa) * r[t - 1]) + shock[t])
 
         # Replace the series values with the fundamental value series.  Round and convert to
         # integer cents.
-        r = np.round(r)
+        s[:] = np.round(r)
 
-        return r.astype(int)
+        return s.astype(int)
 
     def get_daily_open_price(
         self, symbol: str, mkt_open: NanosecondTime, cents: bool = True
@@ -114,9 +130,9 @@ class ManualOracle(Oracle):
         symbol: str,
         current_time: NanosecondTime,
         random_state: np.random.RandomState,
-        sigma_n: int = 50**2  # sd of 50 ticks
+        sigma_n: int = 1000,
     ) -> int:
-        """Return a noisy observation of the current fundamental value (NOTE: in term of tick).
+        """Return a noisy observation of the current fundamental value.
 
         While the fundamental value for a given equity at a given time step does
         not change, multiple agents observing that value will receive different
@@ -133,10 +149,9 @@ class ManualOracle(Oracle):
 
         # If the request is made after market close, return the close price.
         if current_time >= self.mkt_close:
-            r_t = self.r[symbol][-1]
+            r_t = self.r[symbol].loc[self.mkt_close - 1]
         else:
-            last_time = int((current_time-self.mkt_open)/str_to_ns(self.freq))
-            r_t = self.r[symbol][last_time]
+            r_t = self.r[symbol].loc[current_time]
 
         # Generate a noisy observation of fundamental value at the current time.
         if sigma_n == 0:
@@ -144,5 +159,8 @@ class ManualOracle(Oracle):
         else:
             obs = int(round(random_state.normal(loc=r_t, scale=sqrt(sigma_n))))
 
-        # Reminder: all simulator prices are specified in integer tick.
+        logger.debug("Oracle: current fundamental value is {} at {}", r_t, current_time)
+        logger.debug("Oracle: giving client value observation {}", obs)
+
+        # Reminder: all simulator prices are specified in integer cents.
         return obs
